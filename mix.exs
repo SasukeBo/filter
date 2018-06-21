@@ -6,8 +6,10 @@ defmodule Filter.MixProject do
       app: :filter,
       version: "0.1.0",
       elixir: "~> 1.6",
+      elixirc_paths: elixirc_paths(Mix.env),
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      aliases: aliases()
     ]
   end
 
@@ -19,6 +21,10 @@ defmodule Filter.MixProject do
     ]
   end
 
+  # Specifies which paths to compile per environment.
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_),     do: ["lib"]
+
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
@@ -27,6 +33,12 @@ defmodule Filter.MixProject do
       {:ecto, "~> 2.0"},
       {:postgrex, "~> 0.11"},
       {:nebulex, "~> 1.0.0-rc.2"}
+    ]
+  end
+
+  defp aliases do
+    [
+      "test": ["ecto.create --quiet", "ecto.migrate", "test"]
     ]
   end
 end

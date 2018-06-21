@@ -9,13 +9,6 @@ config :filter, Filter.Cache,
 
 config :filter, ecto_repos: [Filter.Repo]
 
-config :filter, Filter.Repo,
-  adapter: Ecto.Adapters.Postgres,
-  database: "filter_repo",
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost"
-
 # This configuration is loaded before any dependency and is restricted
 # to this project. If another project depends on this project, this
 # file won't be loaded nor affect the parent project. For this reason,
@@ -41,4 +34,4 @@ config :filter, Filter.Repo,
 # Configuration from the imported file will override the ones defined
 # here (which is why it is important to import them last).
 #
-#     import_config "#{Mix.env}.exs"
+import_config "#{Mix.env}.exs"

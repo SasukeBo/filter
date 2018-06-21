@@ -1,5 +1,5 @@
 defmodule Filter do
-  import Ecto.Query, only: [from: 1]
+  import Ecto.Query, warn: false
   alias Filter.DirtyWords
   alias Filter.Cache
   alias Filter.Retrieval
@@ -14,17 +14,22 @@ defmodule Filter do
 
     ## Examples
 
-      iex> Filter.add_words([%{content: "abc", level: 0}])
+      iex> Filter.add_word(%{content: "abc", level: 0})
       :ok
   """
-  def add_words(words_list) do
+  def add_word(word) do
     init()
 
-    Enum.each(words_list, fn word ->
-      case insert_word(word) do
-        {:ok, word} -> Cache.set(word.content, word)
-      end
-    end)
+    {:ok, new_word} =
+      %DirtyWords{}
+      |> DirtyWords.changeset(%{
+        content: word.content,
+        level: String.to_integer("#{word.level}", 2)
+      })
+      |> Repo.insert()
+
+    Cache.set(word.content, new_word)
+    {:ok, new_word}
   end
 
   @doc """
@@ -33,16 +38,17 @@ defmodule Filter do
 
     ## Examples
 
-      iex> Filter.delete_word(19)
-      "abc"
+      iex> Filter.delete_word(id)
+      {:ok, %Filter.DirtyWords{...}}
   """
   def delete_word(id) do
     init()
     word = Repo.get!(DirtyWords, id)
 
     case Repo.delete(word) do
-      {:ok, struct} -> Cache.delete(struct.content)
+      {:ok, word} -> Cache.delete(word.content)
     end
+    {:ok, word}
   end
 
   @doc """
@@ -52,15 +58,13 @@ defmodule Filter do
 
       iex> Filter.all_words
       [
-        %{content: "中国", id: 1, level: 1},
-        %{content: "美国", id: 2, level: 0},
-        %{content: "英国", id: 4, level: 0}
+        %Filter.DirtyWords{...},
+        ...
       ]
   """
   def all_words do
-    from(DirtyWords)
+    DirtyWords
     |> Filter.Repo.all()
-    |> Enum.map(fn word -> %{id: word.id, content: word.content, level: word.level} end)
   end
 
   @doc """
@@ -68,10 +72,9 @@ defmodule Filter do
 
     ## Examples
 
-      iex> Filter.filter_words("美。国，王八@ 蛋")
+      iex> Filter.filter_words("按照敏感词集过滤文字中的敏感词汇，返回命中的敏感词列表")
       [
-         %{content: "美国", id: 2, level: 0},
-         %{content: "王八蛋", id: 17, level: 0}
+         %{content: "敏感词", id: 2, level: 0},
       ]
   """
   def filter_words(words) do
@@ -85,18 +88,11 @@ defmodule Filter do
   defp transform_in(str) do
     str
     |> String.downcase()
-    |> String.replace(~r/[，？。、,<>~!@#%&\*\$\^\(\)\{\}\[\]\/\\\|\-\+_=\.\?\s\n]/, "")
-    |> IO.inspect()
+    |> String.replace(~r/[,<>~!@#%&\*\$\^\(\)\{\}\[\]\/\\\|\-\+_=\.\?\s\n]/, "")
   end
 
   defp transform_out(lists) do
     Enum.map(lists, fn list -> Enum.reduce(list, <<>>, fn bit, acc -> acc <> <<bit>> end) end)
-  end
-
-  defp insert_word(word) do
-    %DirtyWords{}
-    |> DirtyWords.changeset(word)
-    |> Repo.insert()
   end
 
   @doc """
